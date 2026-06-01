@@ -15,6 +15,11 @@ class GuestMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
+        if(auth()->check()) {
+            return auth()->user()->isAdmin() 
+            ? redirect()->route('admin.dashboard') 
+            : redirect()->route('employee.profile');
+        }
         return $next($request);
     }
 }

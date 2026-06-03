@@ -56,7 +56,7 @@ class EmployeeController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => ['required', 'string', 'min:8'],
             'phone' => ['required', 'string', 'max:20'],
             'position' => ['required', 'string', 'max:50'],
             'department' => ['required', 'string', 'max:50'],
@@ -99,15 +99,17 @@ class EmployeeController extends Controller
      */
     public function edit(string $id)
     {
-        $user->load('employee');
+        $user = User::with('employee')->findOrFail($id);
         return view('admin.employees.edit', compact('user'));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id, User $user)
+    public function update(Request $request, string $id)
     {
+        $user = User::with('employee')->findOrFail($id);
+
         $validated = $request->validate([
             'name'         => ['required', 'string', 'max:100'],
             'email'        => ['required', 'email', 'unique:users,email,' . $user->id],
@@ -144,11 +146,12 @@ class EmployeeController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id, User $user)
+    public function destroy(string $id)
     {
+        $user = User::with('employee')->findOrFail($id);
         $user->delete();
 
         return redirect()->route('admin.employees.index')
-        ->with('success', 'EM=mployee deleted successfully');
+        ->with('success', 'Employee deleted successfully');
     }
 }

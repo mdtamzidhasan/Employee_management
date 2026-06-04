@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Employee;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class EmployeeController extends Controller
 {
@@ -53,11 +54,18 @@ class EmployeeController extends Controller
      */
     public function store(Request $request)
     {
+        $user = auth()->user();
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
-            'phone' => ['required', 'string', 'max:20'],
+            'phone' => [
+                'required',
+                'string',
+                'max:20',
+                 Rule::unique('employees', 'phone')->ignore($user->employee->id),
+                'regex:/^(?:\+880|880|0)?1[3-9]\d{8}$/',
+            ],,
             'position' => ['required', 'string', 'max:50'],
             'department' => ['required', 'string', 'max:50'],
             'salary' => ['required', 'numeric'],
@@ -113,12 +121,18 @@ class EmployeeController extends Controller
         $validated = $request->validate([
             'name'         => ['required', 'string', 'max:100'],
             'email'        => ['required', 'email', 'unique:users,email,' . $user->id],
-            'phone'        => ['nullable', 'string', 'max:20'],
+            'phone' => [
+                'nullable',
+                'string',
+                'max:20',
+                 Rule::unique('employees', 'phone')->ignore($user->employee->id),
+                'regex:/^(?:\+880|880|0)?1[3-9]\d{8}$/',
+            ],
             'department'   => ['nullable', 'string', 'max:100'],
             'position'     => ['nullable', 'string', 'max:100'],
             'salary'       => ['nullable', 'numeric', 'min:0'],
             'joining_date' => ['nullable', 'date'],
-            'address'      => ['nullable', 'string'],
+            'address'      => ['nullable', 'string', 'min:10', 'max:300'],
             'status'       => ['required', 'in:active,inactive'],
         ]);
 

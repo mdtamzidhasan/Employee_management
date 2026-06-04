@@ -3,6 +3,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Employee\ProfileController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\PasswordConfigController;
 
 Route::middleware('guest.custom')->group(function () {
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
@@ -18,14 +19,19 @@ Route::post('logout', [AuthController::class, 'logout'])->middleware('auth.custo
 Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', fn() => view('admin.dashboard'))->name('dashboard');
     Route::resource('employees', EmployeeController::class);
+
+    Route::get('/password-config', [PasswordConfigController::class, 'show'])->name('password.config');
+    Route::put('/password-config', [PasswordConfigController::class, 'update'])->name('password.config.update');
 });
 
 
 Route::middleware('auth.custom')->prefix('employee')->name('employee.')->group(function () {
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
-});
 
+    Route::get('/details', [ProfileController::class, 'details'])->name('details');
+    
+});
 
 Route::get('/', function () {
     if (auth()->check()) {

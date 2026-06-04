@@ -9,13 +9,15 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use App\Models\PasswordConfiguration;
 
 class AuthController extends Controller
 {
     public function showRegister()
-    {
-        return view('auth.register');
-    }
+{
+    $config = PasswordConfiguration::getConfig();
+    return view('auth.register', compact('config'));
+}
 
     public function register(RegisterRequest $request)
     {
@@ -43,7 +45,7 @@ class AuthController extends Controller
 
 public function login(LoginRequest $request)
 {
-    $credentials = $request->only('email', 'password'); // ✅ শুধু এটুকুই দরকার
+    $credentials = $request->only('email', 'password'); 
     $remember    = $request->boolean('remember');
 
     if (Auth::attempt($credentials, $remember)) {

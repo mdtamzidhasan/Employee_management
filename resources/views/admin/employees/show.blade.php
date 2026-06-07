@@ -27,11 +27,19 @@
     {{-- Profile Card --}}
     <div class="bg-white rounded-xl border border-slate-200 p-6 mb-5">
         <div class="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100">
-            <div class="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                <span class="text-2xl font-semibold text-indigo-600">
-                    {{ strtoupper(substr($user->name, 0, 1)) }}
-                </span>
-            </div>
+            <div class="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-slate-200">
+    @if($user->employee?->profile_photo)
+        <img src="{{ $user->employee->profile_photo }}"
+             alt="{{ $user->name }}"
+             class="w-full h-full object-cover">
+    @else
+        <div class="w-full h-full bg-indigo-100 flex items-center justify-center">
+            <span class="text-2xl font-semibold text-indigo-600">
+                {{ strtoupper(substr($user->name, 0, 1)) }}
+            </span>
+        </div>
+    @endif
+</div>
             <div>
                 <h2 class="text-xl font-semibold text-slate-800">{{ $user->name }}</h2>
                 <p class="text-sm text-slate-500">{{ $user->email }}</p>

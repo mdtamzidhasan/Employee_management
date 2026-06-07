@@ -28,9 +28,9 @@ Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
 Route::middleware('auth.custom')->prefix('employee')->name('employee.')->group(function () {
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
-
+    Route::post('/profile/photo', [ProfileController::class, 'uploadPhoto'])->name('profile.photo');
     Route::get('/details', [ProfileController::class, 'details'])->name('details');
-    
+    Route::get('/details/download', [ProfileController::class, 'downloadPdf'])->name('details.download');
 });
 
 Route::get('/', function () {

@@ -101,9 +101,19 @@
             @foreach($recent as $emp)
                 <div class="flex items-center justify-between px-6 py-3.5 hover:bg-slate-50 transition-colors">
                     <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                            <span class="text-sm font-semibold text-indigo-600">{{ strtoupper(substr($emp->name, 0, 1)) }}</span>
-                        </div>
+                        <div class="w-9 h-9 rounded-full overflow-hidden flex-shrink-0">
+    @if($emp->employee?->profile_photo)
+        <img src="{{ $emp->employee->profile_photo }}"
+             alt="{{ $emp->name }}"
+             class="w-full h-full object-cover">
+    @else
+        <div class="w-full h-full bg-indigo-100 flex items-center justify-center">
+            <span class="text-sm font-semibold text-indigo-600">
+                {{ strtoupper(substr($emp->name, 0, 1)) }}
+            </span>
+        </div>
+    @endif
+</div>
                         <div>
                             <p class="text-sm font-medium text-slate-800">{{ $emp->name }}</p>
                             <p class="text-xs text-slate-400">{{ $emp->email }}</p>

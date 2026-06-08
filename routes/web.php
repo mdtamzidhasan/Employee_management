@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Employee\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\PasswordConfigController;
+use App\Http\Controllers\Admin\SecurityLogController;
 
 Route::middleware('guest.custom')->group(function () {
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
@@ -22,13 +23,16 @@ Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
 
     Route::get('/password-config', [PasswordConfigController::class, 'show'])->name('password.config');
     Route::put('/password-config', [PasswordConfigController::class, 'update'])->name('password.config.update');
+
+    Route::get('/security-logs', [SecurityLogController::class, 'index'])->name('security.logs');
+
 });
 
 
 Route::middleware('auth.custom')->prefix('employee')->name('employee.')->group(function () {
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::post('/profile/photo', [ProfileController::class, 'uploadPhoto'])->name('profile.photo');
+    Route::post('/profile/photo', [ProfileController::class, 'uploadPhoto'])->middleware('throttle:3,1')->name('profile.photo');
     Route::get('/details', [ProfileController::class, 'details'])->name('details');
     Route::get('/details/download', [ProfileController::class, 'downloadPdf'])->name('details.download');
 });

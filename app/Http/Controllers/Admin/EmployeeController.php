@@ -8,12 +8,19 @@ use App\Models\User;
 use App\Models\Employee;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use App\Models\SecurityLog;
+use App\Services\SecurityLogger;
 
 class EmployeeController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    protected $logger;
+
+    public function __construct(SecurityLogger $logger)
+    {
+        $this->logger = $logger;
+    }
+
+
     public function index(Request $request)
     {
         $query = User::with('employee')
@@ -89,6 +96,17 @@ class EmployeeController extends Controller
             'address' => $validated['address'] ?? null,
         ]);
 
+        $this->logger->info(
+            SecurityLog::EVENT_EMPLOYEE_CREATED,
+            "New employee created by admin: {$user->email}",
+            [
+                'created_user_id'    => $user->id,
+                'created_user_name'  => $user->name,
+                'created_user_email' => $user->email,
+                'admin_id'           => auth()->id(),
+                'admin_email'        => auth()->user()->email,
+            ]
+        );
 
         return redirect()->route('admin.employees.index')->with('success', 'Employee created successfully.');
     }
@@ -153,6 +171,19 @@ class EmployeeController extends Controller
                 'status' => $validated['status'],
             ]
         );
+        $this->logger->info(
+            SecurityLog::EVENT_EMPLOYEE_UPDATED,
+            "Employee updated by admin: {$user->email}",
+            [
+                'updated_user_id'    => $user->id,
+                'updated_user_name'  => $user->name,
+                'updated_user_email' => $user->email,
+                'admin_id'           => auth()->id(),
+                'admin_email'        => auth()->user()->email,
+            ]
+        );  
+
+
         return redirect()->route('admin.employees.index')
             ->with('success', 'Employee updated successfully.');
     }
@@ -164,6 +195,17 @@ class EmployeeController extends Controller
     {
         $user = User::with('employee')->findOrFail($id);
         $user->delete();
+         $this->logger->critical(
+        SecurityLog::EVENT_EMPLOYEE_DELETED,
+        "Employee deleted by admin: {$user->email}",
+        [
+            'deleted_user_id'    => $user->id,
+            'deleted_user_name'  => $user->name,
+            'deleted_user_email' => $user->email,
+            'admin_id'           => auth()->id(),
+            'admin_email'        => auth()->user()->email,
+        ]
+    );
 
         return redirect()->route('admin.employees.index')
         ->with('success', 'Employee deleted successfully');

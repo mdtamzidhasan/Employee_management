@@ -1,12 +1,17 @@
 <?php
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\PasswordConfiguration;
+use App\Models\SecurityLog;
+use App\Services\SecurityLogger;
 use Illuminate\Http\Request;
 
 class PasswordConfigController extends Controller
 {
+    public function __construct(protected SecurityLogger $logger) {}
+
     public function show()
     {
         $config = PasswordConfiguration::getConfig();
@@ -28,7 +33,20 @@ class PasswordConfigController extends Controller
             'password_history_count' => ['required', 'integer', 'min:1',  'max:20'],
         ]);
 
+        $oldConfig = PasswordConfiguration::getConfig()->toArray();
+
         PasswordConfiguration::getConfig()->update($validated);
+
+        $this->logger->warning(
+            SecurityLog::EVENT_CONFIG_CHANGED,
+            "Password configuration changed by admin: " . auth()->user()->email,
+            [
+                'admin_id'     => auth()->id(),
+                'admin_email'  => auth()->user()->email,
+                'old_config'   => $oldConfig,
+                'new_config'   => $validated,
+            ]
+        );
 
         return back()->with('success', 'Password configuration saved successfully.');
     }

@@ -58,7 +58,6 @@
                 <input type="file"
                        id="photo-input"
                        name="profile_photo"
-                       accept=".jpg,.jpeg,.png"
                        onchange="submitPhotoForm()">
             </form>
         </div>
@@ -258,12 +257,12 @@ function submitPhotoForm() {
     }
 
     // Type check
-    const allowed = ['image/jpeg', 'image/jpg', 'image/png'];
-    if (!allowed.includes(file.type)) {
-        alert('Only JPG, JPEG, PNG files are allowed.');
-        input.value = '';
-        return;
-    }
+    // const allowed = ['image/jpeg', 'image/jpg', 'image/png'];
+    // if (!allowed.includes(file.type)) {
+    //     alert('Only JPG, JPEG, PNG files are allowed.');
+    //     input.value = '';
+    //     return;
+    // }
 
     document.getElementById('photo-form').submit();
 }

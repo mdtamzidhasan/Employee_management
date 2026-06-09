@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
-
+use \App\Models\PasswordConfiguration;
 
 use App\Models\User;
 use App\Services\SecurityLogger;
@@ -20,7 +20,7 @@ class AuthController extends Controller
 
     public function showRegister()
     {
-        $config = \App\Models\PasswordConfiguration::getConfig();
+        $config = PasswordConfiguration::getConfig();
         return view('auth.register', compact('config'));
     }
 
@@ -109,7 +109,6 @@ class AuthController extends Controller
             ];
 
             if ($attempts >= 5) {
-                // 5 বার হলে lock করো
                 $data['locked_until'] = now()->addMinutes(30);
                 $user->update($data);
 
@@ -124,7 +123,7 @@ class AuthController extends Controller
                 ])->withInput($request->only('email'));
             }
 
-            // 5 এর কম হলে remaining দেখাও
+            // show remaining attempts before lockout
             $user->update($data);
             $remaining = 5 - $attempts;
 

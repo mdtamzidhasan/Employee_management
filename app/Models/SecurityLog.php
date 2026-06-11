@@ -38,6 +38,7 @@ class SecurityLog extends Model
     const EVENT_SESSION_ANOMALY  = 'session_anomaly';
     const EVENT_UNAUTHORIZED     = 'unauthorized_access';
 
+
     // Severity levels
     const SEVERITY_INFO     = 'info';
     const SEVERITY_WARNING  = 'warning';

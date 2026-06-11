@@ -53,7 +53,7 @@ class SecurityLogger
     // ── Alert check — suspicious activity ─────────────────
     public function checkAndAlert(string $eventType, string $ip, int $threshold = 5): bool
     {
-        // শেষ ১০ মিনিটে একই IP থেকে কতবার হয়েছে
+        
         $count = SecurityLog::where('event_type', $eventType)
             ->where('ip_address', $ip)
             ->where('created_at', '>=', now()->subMinutes(10))

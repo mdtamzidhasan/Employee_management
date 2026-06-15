@@ -37,6 +37,9 @@ class SecurityLog extends Model
     const EVENT_RATE_LIMITED     = 'rate_limit_exceeded';
     const EVENT_SESSION_ANOMALY  = 'session_anomaly';
     const EVENT_UNAUTHORIZED     = 'unauthorized_access';
+    const EVENT_OTP_SENT         = 'otp_sent';   
+    const EVENT_OTP_VERIFIED     = 'otp_verified';
+    const EVENT_OTP_FAILED      = 'otp_failed';
 
 
     // Severity levels

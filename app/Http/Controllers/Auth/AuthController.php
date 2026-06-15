@@ -5,7 +5,8 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
-use \App\Models\PasswordConfiguration;
+use App\Models\PasswordConfiguration;
+use App\Services\OtpService;
 
 use App\Models\User;
 use App\Services\SecurityLogger;
@@ -16,7 +17,7 @@ use App\Models\SecurityLog;
 
 class AuthController extends Controller
 {
-    public function __construct(protected SecurityLogger $logger) {}
+    public function __construct(protected SecurityLogger $logger, protected OtpService $otpService) {}
 
     public function showRegister()
     {
@@ -26,6 +27,7 @@ class AuthController extends Controller
 
     public function register(RegisterRequest $request)
     {
+      
         $user = User::create([
             'name'     => $request->name,
             'email'    => $request->email,
@@ -35,7 +37,7 @@ class AuthController extends Controller
 
         $user->employee()->create();
         Auth::login($user);
-
+        
         // ── Log registration ───────────────────────────────
         $this->logger->info(
             SecurityLog::EVENT_LOGIN_SUCCESS,
@@ -52,11 +54,11 @@ class AuthController extends Controller
         return view('auth.login');
     }
 
-    public function login(LoginRequest $request)
+   public function login(LoginRequest $request)
     {
         $user = User::where('email', $request->email)->first();
 
-        // ── Account lock check ─────────────────────────────
+        // ── Account lock check — Same as before ────────────
         if ($user && $user->locked_until && now()->isBefore($user->locked_until)) {
             $minutesLeft = now()->diffInMinutes($user->locked_until) + 1;
 
@@ -72,82 +74,84 @@ class AuthController extends Controller
         }
 
         $credentials = $request->only('email', 'password');
-        $remember    = $request->boolean('remember');
 
-        if (Auth::attempt($credentials, $remember)) {
+        // ── Auth::validate() — শুধু password check, login হয় না ─
+        if (!Auth::validate($credentials)) {
 
-            // ── Login success ──────────────────────────────
+            // ── Login failed — Same logic as before ─────────
             if ($user) {
-                $user->update([
-                    'failed_login_attempts' => 0,
-                    'locked_until'          => null,
-                    'last_failed_at'        => null,
-                ]);
-            }
+                $recentFails = SecurityLog::where('event_type', SecurityLog::EVENT_LOGIN_FAILED)
+                    ->where('user_id', $user->id)
+                    ->where('created_at', '>=', now()->subMinutes(1))
+                    ->count();
 
-            $request->session()->regenerate();
+                $attempts = $recentFails + 1;
+                $data = [
+                    'failed_login_attempts' => $attempts,
+                    'last_failed_at'        => now(),
+                ];
 
-            $this->logger->info(
-                SecurityLog::EVENT_LOGIN_SUCCESS,
-                "Successful login: {$request->email}",
-                ['role' => auth()->user()->role]
-            );
+                if ($attempts >= 5) {
+                    $data['locked_until'] = now()->addMinutes(30);
+                    $user->update($data);
 
-            return redirect()->intended(
-                auth()->user()->isAdmin()
-                    ? route('admin.dashboard')
-                    : route('employee.profile')
-            )->with('success', 'Login successful. Welcome back!');
-        }
+                    $this->logger->critical(
+                        SecurityLog::EVENT_ACCOUNT_LOCKED,
+                        "Account locked after {$attempts} failed attempts in 1 minute: {$request->email}",
+                        ['email' => $request->email, 'attempts' => $attempts]
+                    );
 
-        // ── Login failed ───────────────────────────────────────
-        if ($user) {
-            $attempts = $user->failed_login_attempts + 1;
-            $data = [
-            'failed_login_attempts' => $attempts,
-            'last_failed_at'        => now(),
-            ];
+                    return back()->withErrors([
+                        'email' => 'Too many failed attempts. Account locked for 30 minutes.',
+                    ])->withInput($request->only('email'));
+                }
 
-            if ($attempts >= 5) {
-                $data['locked_until'] = now()->addMinutes(30);
                 $user->update($data);
+                $remaining = 5 - $attempts;
 
-                $this->logger->critical(
-                SecurityLog::EVENT_ACCOUNT_LOCKED,
-                "Account locked after {$attempts} failed attempts: {$request->email}",
-                ['email' => $request->email, 'attempts' => $attempts]
+                $this->logger->warning(
+                    SecurityLog::EVENT_LOGIN_FAILED,
+                    "Failed login attempt for: {$request->email}",
+                    ['email' => $request->email, 'attempts' => $attempts]
                 );
 
                 return back()->withErrors([
-                     'email' => 'Too many failed attempts. Account locked for 30 minutes.',
+                    'email' => "Invalid credentials. {$remaining} attempt(s) remaining before lockout.",
                 ])->withInput($request->only('email'));
             }
 
-            // show remaining attempts before lockout
-            $user->update($data);
-            $remaining = 5 - $attempts;
-
             $this->logger->warning(
                 SecurityLog::EVENT_LOGIN_FAILED,
-                "Failed login attempt for: {$request->email}",
-                ['email' => $request->email, 'attempts' => $attempts]
+                "Failed login for unknown email: {$request->email}",
+                ['email' => $request->email]
             );
 
             return back()->withErrors([
-            'email' => "Invalid credentials. {$remaining} attempt(s) remaining before lockout.",
+                'email' => 'These credentials do not match our records.',
             ])->withInput($request->only('email'));
         }
 
-        $this->logger->warning(
-            SecurityLog::EVENT_LOGIN_FAILED,
-            "Failed login for unknown email: {$request->email}",
-            ['email' => $request->email]
-        );
+        // ── Password সঠিক — এখন OTP পাঠাও ─────────────────────
 
-        return back()->withErrors([
-            'email' => 'These credentials do not match our records.',
-        ])->withInput($request->only('email'));
+        // Failed attempts reset করো (password তো সঠিক দিয়েছে)
+        $user->update([
+            'failed_login_attempts' => 0,
+            'locked_until'          => null,
+            'last_failed_at'        => null,
+        ]);
+
+        $this->otpService->generateAndSend($user, $request->ip());
+
+        // ── Session এ pending user রাখো (এখনো login হয়নি) ────
+        session([
+            'otp_user_id'  => $user->id,
+            'otp_remember' => $request->boolean('remember'),
+        ]);
+
+        return redirect()->route('otp.verify')
+            ->with('success', 'A verification code has been sent to your email.');
     }
+
 
     public function logout(Request $request)
     {

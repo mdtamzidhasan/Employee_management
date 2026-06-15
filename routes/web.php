@@ -5,12 +5,22 @@ use App\Http\Controllers\Employee\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\PasswordConfigController;
 use App\Http\Controllers\Admin\SecurityLogController;
+use App\Http\Controllers\Auth\OtpController;
 
 Route::middleware('guest.custom')->group(function () {
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
     Route::post('/register', [AuthController::class, 'register'])->name('register.post');
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+
+
+    Route::get('/verify-otp', [OtpController::class, 'show'])->name('otp.verify');
+    Route::post('/verify-otp', [OtpController::class, 'verify'])
+         ->middleware('throttle:5,1')
+         ->name('otp.verify.post');
+    Route::post('/resend-otp', [OtpController::class, 'resend'])
+         ->middleware('throttle:1,1')
+         ->name('otp.resend');
 });
 
 

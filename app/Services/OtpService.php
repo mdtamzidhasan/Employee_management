@@ -12,15 +12,23 @@ class OtpService
 {
     public function __construct(protected SecurityLogger $logger) {}
 
-    // ── নতুন OTP generate করে email পাঠায় ───────────────────
+    // Generate new otp and send to the email
     public function generateAndSend(User $user, string $ip): Otp
     {
-        // ── পুরানো unverified OTP গুলো invalidate করো ────────
+        // Time when send Last OTP 
+        $lastOtp = Otp::where('user_id', $user->id)
+                   ->latest()
+                   ->first();
+
+        if ($lastOtp && $lastOtp->created_at->diffInSeconds(now()) < 60) {
+            throw new \Exception('Please wait 1 minute before requesting another OTP.');
+        }
+        // ── invalidate old otp
         Otp::where('user_id', $user->id)
            ->whereNull('verified_at')
-           ->update(['expires_at' => now()]); // expire করে দাও
+           ->update(['expires_at' => now()]); // expire 
 
-        // ── নতুন 6 digit code generate করো ──────────────────
+        //new 6 digit code generate 
         $code = (string) random_int(100000, 999999);
 
         $otp = Otp::create([
@@ -31,7 +39,7 @@ class OtpService
             'ip_address' => $ip,
         ]);
 
-        // ── Email পাঠাও ──────────────────────────────────────
+        // Send Email
         Mail::to($user->email)->send(new OtpMail($code, $user->name));
 
         $this->logger->info(
@@ -43,7 +51,7 @@ class OtpService
         return $otp;
     }
 
-    // ── OTP verify করো ───────────────────────────────────────
+    // OTP verify 
     public function verify(User $user, string $code, string $ip): array
     {
         $otp = Otp::where('user_id', $user->id)
@@ -51,7 +59,7 @@ class OtpService
                   ->latest()
                   ->first();
 
-        // ── কোনো OTP নেই ──────────────────────────────────────
+        
         if (!$otp) {
             $this->logger->warning(
                 SecurityLog::EVENT_OTP_FAILED,
@@ -62,7 +70,7 @@ class OtpService
             return ['success' => false, 'message' => 'No OTP found. Please request a new one.'];
         }
 
-        // ── Expired ──────────────────────────────────────────
+        // Expired 
         if ($otp->isExpired()) {
             $this->logger->warning(
                 SecurityLog::EVENT_OTP_FAILED,
@@ -73,19 +81,23 @@ class OtpService
             return ['success' => false, 'message' => 'OTP has expired. Please request a new one.'];
         }
 
-        // ── Too many attempts ──────────────────────────────────
+        //  Too many attempts 
         if ($otp->attempts >= 5) {
+                $user->update([
+                'locked_until' => now()->addMinutes(30),
+            ]);
+
             $this->logger->critical(
-                SecurityLog::EVENT_OTP_FAILED,
-                "Too many OTP attempts for: {$user->email}",
-                ['user_id' => $user->id, 'ip' => $ip]
+            SecurityLog::EVENT_ACCOUNT_LOCKED,
+            "Account locked after too many OTP attempts: {$user->email}",
+            ['user_id' => $user->id, 'ip' => $ip]
             );
 
-            return ['success' => false, 'message' => 'Too many failed attempts. Please request a new OTP.'];
+            return ['success' => false, 'message' => 'Too many failed attempts. Account locked for 30 minutes.'];
         }
 
-        // ── Code ভুল ──────────────────────────────────────────
-        if ($otp->code !== $code) {
+        // invalid Code 
+        if (!hash_equals($otp->code, $code)) {
             $otp->increment('attempts');
 
             $this->logger->warning(
@@ -98,7 +110,7 @@ class OtpService
             return ['success' => false, 'message' => "Invalid OTP. {$remaining} attempt(s) remaining."];
         }
 
-        // ── সঠিক OTP ─────────────────────────────────────────
+        // valid OTP
         $otp->update(['verified_at' => now()]);
 
         $this->logger->info(

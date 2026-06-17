@@ -17,10 +17,10 @@ class OtpController extends Controller
         protected OtpService $otpService,
     ) {}
 
-    // ── OTP Verify Page দেখাও ────────────────────────────────
+    // OTP Verify Page 
     public function show()
     {
-        // ── pending login না থাকলে login page এ পাঠাও ─────────
+  
         if (!session()->has('otp_user_id')) {
             return redirect()->route('login');
         }
@@ -32,13 +32,13 @@ class OtpController extends Controller
             return redirect()->route('login');
         }
 
-        // Email এর কিছু অংশ masked করে দেখাও — security
+
         $maskedEmail = $this->maskEmail($user->email);
 
         return view('auth.verify-otp', compact('maskedEmail'));
     }
 
-    // ── OTP Verify করো ───────────────────────────────────────
+    // OTP Verify
     public function verify(Request $request)
     {
         $request->validate([
@@ -46,7 +46,7 @@ class OtpController extends Controller
         ], [
             'otp.required' => 'Please enter the verification code.',
             'otp.size'     => 'Verification code must be 6 digits.',
-        ]);
+            ]);
 
         if (!session()->has('otp_user_id')) {
             return redirect()->route('login');
@@ -55,7 +55,7 @@ class OtpController extends Controller
         $user = User::find(session('otp_user_id'));
 
         if (!$user) {
-            session()->forget(['otp_user_id', 'otp_remember']);
+            session()->forget(['otp_user_id', 'otp_remember', 'otp_is_register']);
             return redirect()->route('login');
         }
 
@@ -65,13 +65,31 @@ class OtpController extends Controller
             return back()->withErrors(['otp' => $result['message']]);
         }
 
-        // ── OTP সঠিক — এখন আসল login করো ──────────────────────
-        $remember = session('otp_remember', false);
+        // register flow check
+        $isRegisterFlow = session('otp_is_register', false);
+        $remember       = session('otp_remember', false);
+
+        //  OTP correct — login 
         Auth::login($user, $remember);
 
-        // ── pending session data clear করো ───────────────────
-        session()->forget(['otp_user_id', 'otp_remember']);
+        if ($isRegisterFlow) {
+            $user->update(['email_verified_at' => now()]);
+        }
+    
+
+        session()->forget(['otp_user_id', 'otp_remember', 'otp_is_register']);
         $request->session()->regenerate();
+
+        if ($isRegisterFlow) {
+            $this->logger->info(
+                SecurityLog::EVENT_LOGIN_SUCCESS,
+                "Registration completed and email verified: {$user->email}",
+                ['user_id' => $user->id]
+            );
+
+            return redirect()->route('employee.profile')
+                ->with('success', 'Registration successful. Welcome to EMS!');
+        }
 
         $this->logger->info(
             SecurityLog::EVENT_LOGIN_SUCCESS,
@@ -86,7 +104,7 @@ class OtpController extends Controller
         )->with('success', 'Login successful. Welcome back!');
     }
 
-    // ── নতুন OTP পাঠাও (Resend) ──────────────────────────────
+  
     public function resend(Request $request)
     {
         if (!session()->has('otp_user_id')) {
@@ -105,7 +123,7 @@ class OtpController extends Controller
         return back()->with('success', 'A new verification code has been sent to your email.');
     }
 
-    // ── Email masking helper ─────────────────────────────────
+    //  Email masking helper 
     private function maskEmail(string $email): string
     {
         [$name, $domain] = explode('@', $email);

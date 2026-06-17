@@ -36,17 +36,22 @@ class AuthController extends Controller
         ]);
 
         $user->employee()->create();
-        Auth::login($user);
-        
-        // ── Log registration ───────────────────────────────
+        $this->otpService->generateAndSend($user, $request->ip());
+
+        // Session pending user 
+        session([
+            'otp_user_id'  => $user->id,
+            'otp_remember' => $request->boolean('remember'),
+            'otp_is_register' => true, 
+        ]);
         $this->logger->info(
             SecurityLog::EVENT_LOGIN_SUCCESS,
-            "New employee registered: {$user->email}",
+            "New employee registered, pending OTP verification: {$user->email}",
             ['user_id' => $user->id, 'name' => $user->name]
         );
 
-        return redirect()->route('employee.profile')
-            ->with('success', 'Registration successful. Welcome!');
+        return redirect()->route('otp.verify')
+            ->with('success', 'A verification code has been sent to your email.');
     }
 
     public function showLogin()
@@ -58,7 +63,7 @@ class AuthController extends Controller
     {
         $user = User::where('email', $request->email)->first();
 
-        // ── Account lock check — Same as before ────────────
+        //Account lock check 
         if ($user && $user->locked_until && now()->isBefore($user->locked_until)) {
             $minutesLeft = now()->diffInMinutes($user->locked_until) + 1;
 
@@ -75,10 +80,10 @@ class AuthController extends Controller
 
         $credentials = $request->only('email', 'password');
 
-        // ── Auth::validate() — শুধু password check, login হয় না ─
+        //  Auth::validate()
         if (!Auth::validate($credentials)) {
 
-            // ── Login failed — Same logic as before ─────────
+            //  Login failed
             if ($user) {
                 $recentFails = SecurityLog::where('event_type', SecurityLog::EVENT_LOGIN_FAILED)
                     ->where('user_id', $user->id)
@@ -131,9 +136,9 @@ class AuthController extends Controller
             ])->withInput($request->only('email'));
         }
 
-        // ── Password সঠিক — এখন OTP পাঠাও ─────────────────────
+        // Password correct, now send OTP
 
-        // Failed attempts reset করো (password তো সঠিক দিয়েছে)
+        // Failed attempts reset
         $user->update([
             'failed_login_attempts' => 0,
             'locked_until'          => null,
@@ -142,7 +147,7 @@ class AuthController extends Controller
 
         $this->otpService->generateAndSend($user, $request->ip());
 
-        // ── Session এ pending user রাখো (এখনো login হয়নি) ────
+        // Session pending user 
         session([
             'otp_user_id'  => $user->id,
             'otp_remember' => $request->boolean('remember'),

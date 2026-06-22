@@ -29,12 +29,12 @@ class RegisterRequest extends FormRequest
             'required',
             'string',
             'confirmed',
-            // ← সবসময় minimum 8, maximum config থেকে
+            // all time minimum 8,  maximum count from config 
             'min:8',
             "max:{$config->max_length}",
         ];
 
-        // Word count — সবসময় apply
+        // Word count — always apply
         if ($config->min_words > 0) {
             $rules[] = function ($attribute, $value, $fail) use ($config) {
                 $spaced    = preg_replace('/([a-z])([A-Z])/', '$1 $2', $value);
@@ -50,12 +50,12 @@ class RegisterRequest extends FormRequest
 
             $length = strlen($value);
 
-            // $config->min_length+ character → complexity check নেই
+            // $config->min_length+ character → without complexity check
             if ($length >= $config->min_length) {
                 return;
             }
 
-            // 8–($config->min_length - 1) character → complexity check করো
+            // 8–($config->min_length - 1) character → with complexity check
             if ($config->require_uppercase && !preg_match('/[A-Z]/', $value)) {
                 $fail('Password must contain at least one uppercase letter (A–Z).');
                 return;

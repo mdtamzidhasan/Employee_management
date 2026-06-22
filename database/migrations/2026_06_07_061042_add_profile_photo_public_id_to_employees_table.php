@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('employees', function (Blueprint $table) {
-            //
+         Schema::table('employees', function (Blueprint $table) {
+             $table->string('profile_photo_public_id')->nullable()->after('profile_photo');
         });
     }
 

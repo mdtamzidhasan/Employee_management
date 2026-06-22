@@ -63,8 +63,10 @@ class EmployeeController extends Controller
     {
         $user = auth()->user();
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'name' => ['required', 'string', 'max:100', 'min:2', 'regex:/^[a-zA-Z\s\.\']+$/'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'
+                        //'email:rfc,dns'
+                        ],
             'password' => ['required', 'string', 'min:8'],
             'phone' => [
                 'nullable',
@@ -76,8 +78,9 @@ class EmployeeController extends Controller
             'position' => ['required', 'string', 'max:50'],
             'department' => ['required', 'string', 'max:50'],
             'salary' => ['required', 'numeric'],
-            'joining_date' => ['required', 'date'],
-            'address' => ['nullable', 'string'],
+            'joining_date' => ['required', 'date', 'after_or_equal:2000-01-01', // company শুরুর তারিখ
+                                'before_or_equal:today',],
+            'address' => ['nullable', 'string', 'max:300', 'min:5'],
         ]);
 
         $user = User::create([
@@ -137,21 +140,25 @@ class EmployeeController extends Controller
         $user = User::with('employee')->findOrFail($id);
 
         $validated = $request->validate([
-            'name'         => ['required', 'string', 'max:100'],
-            'email'        => ['required', 'email', 'unique:users,email,' . $user->id],
-            'phone' => [
-                'nullable',
-                'string',
-                'max:20',
-                 Rule::unique('employees', 'phone')->ignore($user->employee->id),
-                'regex:/^(?:\+880|880|0)?1[3-9]\d{8}$/',
+            'name'      => ['required', 'string', 'max:100', 'min:2', 'regex:/^[a-zA-Z\s\.\']+$/'],
+            'email'     => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)
+                            //'email:rfc,dns'
+                            ],
+            'password'  => ['nullable', 'string', 'min:8'],
+            'phone'     => [
+                            'nullable',
+                            'string',
+                            'max:20',
+                            Rule::unique('employees', 'phone')->ignore($user->employee->id),
+                            'regex:/^(?:\+880|880|0)?1[3-9]\d{8}$/',
             ],
-            'department'   => ['nullable', 'string', 'max:100'],
-            'position'     => ['nullable', 'string', 'max:100'],
-            'salary'       => ['nullable', 'numeric', 'min:0'],
-            'joining_date' => ['nullable', 'date'],
-            'address'      => ['nullable', 'string', 'min:10', 'max:300'],
-            'status'       => ['required', 'in:active,inactive'],
+            'position'  => ['required', 'string', 'max:50'],
+            'department' => ['required', 'string', 'max:50'],
+            'salary'    => ['required', 'numeric'],
+            'joining_date' => ['required', 'date', 'after_or_equal:2000-01-01', // company শুরুর তারিখ
+                                'before_or_equal:today',],
+            'address'    => ['nullable', 'string', 'max:300', 'min:5'],
+            'status'     => ['required', 'in:active,inactive'],
         ]);
 
         $user->update([

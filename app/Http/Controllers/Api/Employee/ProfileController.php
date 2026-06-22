@@ -16,14 +16,14 @@ class ProfileController extends Controller
 {
     public function __construct(protected SecurityLogger $logger) {}
 
-    // ── Same logic as Web ProfileController@show ──────────
+    // Same logic as Web ProfileController@show 
     public function show(Request $request)
     {
         $user = $request->user()->load('employee');
         return new UserResource($user);
     }
 
-    // ── Same logic as Web ProfileController@update ────────
+    // Same logic as Web ProfileController@update 
     public function update(Request $request)
     {
         $user = $request->user();

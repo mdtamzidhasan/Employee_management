@@ -19,7 +19,6 @@ class AuthController extends Controller
 
     public function register(RegisterRequest $request)
     {
-        // ── Same business logic as Web AuthController ────────
         $user = User::create([
             'name'     => $request->name,
             'email'    => $request->email,
@@ -35,7 +34,7 @@ class AuthController extends Controller
             ['user_id' => $user->id, 'name' => $user->name]
         );
 
-        // ── API specific: token তৈরি করো ──────────────────────
+        //  API specific: token
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
@@ -50,7 +49,7 @@ class AuthController extends Controller
     {
         $user = User::where('email', $request->email)->first();
 
-        // ── Account lock check — Same as Web ──────────────────
+        //  Account lock check — Same as Web 
         if ($user && $user->locked_until && now()->isBefore($user->locked_until)) {
             $minutesLeft = now()->diffInMinutes($user->locked_until) + 1;
 
@@ -67,10 +66,10 @@ class AuthController extends Controller
 
         $credentials = $request->only('email', 'password');
 
-        // ── Same Auth::attempt() logic — কিন্তু session ছাড়া ────
+        // Same Auth::attempt() logic without session
         if (!Auth::validate($credentials)) {
 
-            // ── Login failed — Same logic as Web ──────────────
+            //  Login failed — Same logic as Web 
             if ($user) {
                 $recentFails = SecurityLog::where('event_type', SecurityLog::EVENT_LOGIN_FAILED)
                     ->where('user_id', $user->id)
@@ -124,7 +123,7 @@ class AuthController extends Controller
             ], 401);
         }
 
-        // ── Login success — Same logic as Web ──────────────────
+        //  Login success — Same logic as Web 
         $user->update([
             'failed_login_attempts' => 0,
             'locked_until'          => null,
@@ -137,8 +136,8 @@ class AuthController extends Controller
             ['role' => $user->role]
         );
 
-        // ── API specific: পুরানো token মুছে নতুন token দাও ──────
-        $user->tokens()->delete(); // আগের সব token revoke
+        // ── API specific: generate new token
+        $user->tokens()->delete(); 
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
@@ -158,7 +157,7 @@ class AuthController extends Controller
             "User logged out via API: {$email}"
         );
 
-        // ── Current token revoke করো ───────────────────────────
+        // Current token revoke 
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([

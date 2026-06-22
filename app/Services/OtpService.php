@@ -16,13 +16,13 @@ class OtpService
     public function generateAndSend(User $user, string $ip): Otp
     {
         // Time when send Last OTP 
-        $lastOtp = Otp::where('user_id', $user->id)
-                   ->latest()
-                   ->first();
+        // $lastOtp = Otp::where('user_id', $user->id)
+        //            ->latest()
+        //            ->first();
 
-        if ($lastOtp && $lastOtp->created_at->diffInSeconds(now()) < 60) {
-            throw new \Exception('Please wait 1 minute before requesting another OTP.');
-        }
+        // if ($lastOtp && $lastOtp->created_at->diffInSeconds(now()) < 60) {
+        //     throw new \Exception('Please wait 1 minute before requesting another OTP.');
+        // }
         // ── invalidate old otp
         Otp::where('user_id', $user->id)
            ->whereNull('verified_at')

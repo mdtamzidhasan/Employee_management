@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Admin\EmployeeController as AdminEmployeeController;
 use App\Http\Controllers\Api\Employee\ProfileController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\Internal\ReportDataController;
 
 //  Public routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -34,4 +35,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/employees/{id}', [AdminEmployeeController::class, 'update']);
         Route::delete('/employees/{id}', [AdminEmployeeController::class, 'destroy']);
     });
+});
+
+
+// ── Internal API — শুধু Service-to-Service communication এর জন্য ──
+Route::middleware('service.key')->prefix('internal')->group(function () {
+    Route::get('/departments', [ReportDataController::class, 'departments']);
+    Route::get('/employees', [ReportDataController::class, 'employees']);
+    Route::get('/employees/{id}', [ReportDataController::class, 'employeeDetail']);
 });

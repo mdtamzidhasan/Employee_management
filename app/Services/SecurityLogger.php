@@ -14,7 +14,7 @@ class SecurityLogger
         $this->request = $request;
     }
 
-    // ── Main log method ───────────────────────────────────
+    // Main log method 
     public function log(
         string $eventType,
         string $severity,

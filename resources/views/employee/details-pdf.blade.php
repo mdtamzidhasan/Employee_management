@@ -188,7 +188,8 @@
         </div>
 
         <div class="profile-section">
-    {{-- Photo বা Initial --}}
+
+    {{-- Photo or Initial --}}
     <div class="avatar" style="padding:0; overflow:hidden;">
         @if($user->employee->profile_photo)
             <img src="{{ public_path($user->employee->profile_photo) }}"

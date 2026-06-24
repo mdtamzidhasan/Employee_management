@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'rbac' => [
+        'api_url' => env('RBAC_API_URL', 'http://127.0.0.1:8003/api'),
+    ],
+
 ];

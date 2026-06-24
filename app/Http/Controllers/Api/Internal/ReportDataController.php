@@ -81,4 +81,48 @@ class ReportDataController extends Controller
             ],
         ]);
     }
+
+
+    //all Employee/User List for Rbac 
+public function users()
+{
+    $users = User::with('employee')
+                  ->where('role', '!=', 'admin')
+                  ->get()
+                  ->map(function ($user) {
+                      return [
+                          'id'         => $user->id,
+                          'name'       => $user->name,
+                          'email'      => $user->email,
+                          'role'       => $user->role,
+                          'department' => $user->employee?->department,
+                          'position'   => $user->employee?->position,
+                          'status'     => $user->employee?->status,
+                      ];
+                  });
+
+    return response()->json(['users' => $users]);
+}
+
+//  One selected User's details 
+public function userDetail(string $id)
+{
+    $user = User::with('employee')->find($id);
+
+    if (!$user) {
+        return response()->json(['message' => 'User not found'], 404);
+    }
+
+    return response()->json([
+        'user' => [
+            'id'         => $user->id,
+            'name'       => $user->name,
+            'email'      => $user->email,
+            'role'       => $user->role,
+            'department' => $user->employee?->department,
+            'position'   => $user->employee?->position,
+            'status'     => $user->employee?->status,
+        ],
+    ]);
+}
 }

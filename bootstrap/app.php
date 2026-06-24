@@ -31,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'guest.custom' => App\Http\Middleware\GuestMiddleware::class,
             'admin.api'    => \App\Http\Middleware\AdminApiMiddleware::class,
             'service.key'  => \App\Http\Middleware\VerifyServiceApiKey::class,
+            'can.permission' => \App\Http\Middleware\CheckPermission::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

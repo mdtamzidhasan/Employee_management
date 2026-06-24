@@ -16,12 +16,24 @@ class ProfileController extends Controller
 {
     public function __construct(protected SecurityLogger $logger) {}
 
-    // Same logic as Web ProfileController@show 
-    public function show(Request $request)
-    {
-        $user = $request->user()->load('employee');
-        return new UserResource($user);
+        // Same logic as Web ProfileController@show 
+    public function show()
+{
+    $user        = auth()->user()->load('employee');
+    $permissions = [];
+
+    // Admin নয় এমন user এর জন্য RBAC থেকে permission আনো
+    if (!$user->isAdmin()) {
+        try {
+            $rbac        = app(\App\Services\RbacApiService::class);
+            $permissions = $rbac->getUserPermissions($user->id);
+        } catch (\Exception $e) {
+            $permissions = [];
+        }
     }
+
+    return view('employee.profile', compact('user', 'permissions'));
+}
 
     // Same logic as Web ProfileController@update 
     public function update(Request $request)

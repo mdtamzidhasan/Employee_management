@@ -38,9 +38,12 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 
-// ── Internal API — শুধু Service-to-Service communication এর জন্য ──
+// Internal API — just for Service-to-Service communication 
 Route::middleware('service.key')->prefix('internal')->group(function () {
     Route::get('/departments', [ReportDataController::class, 'departments']);
     Route::get('/employees', [ReportDataController::class, 'employees']);
     Route::get('/employees/{id}', [ReportDataController::class, 'employeeDetail']);
+    // For Rbac (Role-Based Access Control) services
+    Route::get('/users', [ReportDataController::class, 'users']);
+    Route::get('/users/{id}', [ReportDataController::class, 'userDetail']);
 });

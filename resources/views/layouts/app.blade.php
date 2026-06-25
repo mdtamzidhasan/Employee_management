@@ -80,39 +80,79 @@
                     </svg>
                         Reports
                 </a>
-            @else
-                <p class="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Employee</p>
-                <a href="{{ route('employee.profile') }}" class="sidebar-link {{ request()->routeIs('employee.profile') ? 'active' : '' }}">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+            @endif
+            @if(auth()->user()->isEmployee())
+                @php
+                    $sidebarObjects  = [];
+                    $isAdminUser     = false;
+
+                    try {
+                        $rbacSvc = app(\App\Services\RbacApiService::class);
+                        $sidebarObjects = $rbacSvc->getUserObjects(auth()->id());
+                    } catch (\Exception $e) {
+                        $sidebarObjects = [];
+                    }
+                @endphp
+
+                <p class="sidebar-section-label">EMPLOYEE</p>
+
+                {{-- My Profile — সবসময় --}}
+                <a href="{{ route('employee.profile') }}"
+                    class="sidebar-link {{ request()->routeIs('employee.profile') ? 'active' : '' }}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
                     My Profile
                 </a>
-                <a href="{{ route('employee.details') }}"
-                    class="sidebar-link {{ request()->routeIs('employee.details') ? 'active' : '' }}">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2"/>
-                    </svg>
-                        My Details
-                </a>
-            @endif
-        </nav>
 
-        <div class="px-3 py-4 sidebar-divider-top">
-            <div class="user-card">
-                <p class="text-white text-sm font-medium truncate">{{ auth()->user()->name }}</p>
-                <p class="text-slate-400 text-xs truncate mt-0.5">{{ auth()->user()->email }}</p>
-                <span class="mt-2 inline-block px-2 py-0.5 text-xs font-medium rounded-full {{ auth()->user()->isAdmin() ? 'badge-admin' : 'badge-employee' }}">
-                    {{ ucfirst(auth()->user()->role) }}
-                </span>
+        {{-- Dynamic Objects from RBAC ─────────────────────────────
+         যতগুলো object permission আছে সবগুলো দেখাবে
+         কোনো hardcode নেই — RBAC Service থেকে dynamically আসে
+        --}}
+                @foreach($sidebarObjects as $obj)
+                    <a href="{{ route('employee.object.show', $obj['slug']) }}"
+                    class="sidebar-link {{ request()->is('employee/object/' . $obj['slug'] . '*') ? 'active' : '' }}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        {{-- Object type অনুযায়ী icon --}}
+                        @if($obj['object_type'] === 'personal')
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        @elseif($obj['object_type'] === 'department')
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                        @elseif($obj['object_type'] === 'system')
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                        @else
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                        @endif
+                        </svg>
+                        {{ $obj['name'] }}
+                    </a>
+                @endforeach
+
+            @endif
+            </nav>
+
+            <div class="px-3 py-4 sidebar-divider-top">
+                <div class="user-card">
+                    <p class="text-white text-sm font-medium truncate">{{ auth()->user()->name }}</p>
+                    <p class="text-slate-400 text-xs truncate mt-0.5">{{ auth()->user()->email }}</p>
+                    <span class="mt-2 inline-block px-2 py-0.5 text-xs font-medium rounded-full {{ auth()->user()->isAdmin() ? 'badge-admin' : 'badge-employee' }}">
+                        {{ ucfirst(auth()->user()->role) }}
+                   </span>
+                </div>
+                <form method="POST" action="{{ route('logout') }}">
+                   @csrf
+                   <button type="submit" class="sidebar-link danger">
+                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                       Logout
+                   </button>
+                </form>
             </div>
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button type="submit" class="sidebar-link danger">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-                    Logout
-                </button>
-            </form>
-        </div>
-    </aside>
+        </aside>
 
     <main class="flex-1 ml-64">
         <header class="bg-white border-b border-slate-200 px-8 py-4 sticky top-0 z-20">

@@ -10,10 +10,12 @@ use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
 use App\Models\SecurityLog;
 use App\Services\SecurityLogger;
+use App\Traits\HasPermissions;
 
 class ProfileController extends Controller
 {
     protected $logger;
+    use HasPermissions;
 
     public function __construct(SecurityLogger $logger)
     {
@@ -23,14 +25,29 @@ class ProfileController extends Controller
     public function show()
     {
         $user = auth()->user()->load('employee');
-        return view('employee.profile', compact('user'));
+        $this->loadPermissions();
+
+        $permissions        = $this->_permissions;
+        $groupedPermissions = $this->_groupedPermissions;
+        $isAdmin            = auth()->user()->isAdmin();
+
+        return view('employee.profile', compact(
+            'user', 'permissions', 'groupedPermissions', 'isAdmin'
+        ));
     }
+
 
     public function details()
     {
         $user = auth()->user()->load('employee');
-        return view('employee.details', compact('user'));
+        $this->loadPermissions();
+
+        $permissions = $this->_permissions;
+        $isAdmin     = auth()->user()->isAdmin();
+
+        return view('employee.details', compact('user', 'permissions', 'isAdmin'));
     }
+    
 
     public function update(Request $request)
     {

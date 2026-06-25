@@ -15,67 +15,99 @@ class RbacApiService
         $this->baseUrl = config('services.rbac.api_url');
     }
 
-    // ── User এর সব Permission আনো (Cache সহ) ─────────────────
+    // ── Full RBAC Data (permissions + objects) আনো ───────────
+    public function getUserRbacData(int $userId): array
+    {
+        // $cacheKey = "rbac_data_{$userId}";
+
+        // return Cache::remember($cacheKey, 300, function () use ($userId) {
+            try {
+                $response = Http::withHeaders(['Accept' => 'application/json'])
+                               ->timeout(5)
+                               ->get("{$this->baseUrl}/check/{$userId}");
+
+                if ($response->failed()) {
+                    return $this->emptyRbacData();
+                }
+
+                return [
+                    'permissions' => $response->json('permissions', []),
+                    'objects'     => $response->json('objects', []),
+                    'role'        => $response->json('role'),
+                ];
+
+            } catch (\Exception $e) {
+                Log::warning('RBAC API unavailable', ['error' => $e->getMessage()]);
+                return $this->emptyRbacData();
+            }
+       
+    }
+
+    // ── শুধু permissions list ─────────────────────────────────
     public function getUserPermissions(int $userId): array
     {
-        $cacheKey = "user_permissions_{$userId}";
-
-        return Cache::remember($cacheKey, 300, function () use ($userId) {
-            try {
-                $response = Http::withHeaders([
-                    'Accept' => 'application/json',
-                ])->timeout(5)->get("{$this->baseUrl}/check/{$userId}");
-
-                if ($response->failed()) {
-                    return [];
-                }
-
-                return $response->json('permissions', []);
-
-            } catch (\Exception $e) {
-                Log::error('RBAC API: Failed to fetch permissions', [
-                    'user_id' => $userId,
-                    'error'   => $e->getMessage(),
-                ]);
-                return [];
-            }
-        });
+        return $this->getUserRbacData($userId)['permissions'];
     }
 
-    // ── User এর Role আনো ─────────────────────────────────────
-    public function getUserRole(int $userId): ?array
+    // ── শুধু objects list (sidebar এর জন্য) ──────────────────
+    public function getUserObjects(int $userId): array
     {
-        $cacheKey = "user_role_{$userId}";
-
-        return Cache::remember($cacheKey, 300, function () use ($userId) {
-            try {
-                $response = Http::withHeaders([
-                    'Accept' => 'application/json',
-                ])->timeout(5)->get("{$this->baseUrl}/check/{$userId}");
-
-                if ($response->failed()) {
-                    return null;
-                }
-
-                return $response->json('role');
-
-            } catch (\Exception $e) {
-                return null;
-            }
-        });
+        return $this->getUserRbacData($userId)['objects'];
     }
 
-    // ── নির্দিষ্ট Permission আছে কিনা Check করো ──────────────
+    // ── একটা নির্দিষ্ট object এর operations ─────────────────
+    public function getObjectOperations(int $userId, string $objectSlug): array
+    {
+        $objects = $this->getUserObjects($userId);
+        foreach ($objects as $object) {
+            if ($object['slug'] === $objectSlug) {
+                return $object['operations'];
+            }
+        }
+        return [];
+    }
+
+    // ── Permission check ──────────────────────────────────────
     public function hasPermission(int $userId, string $permission): bool
     {
-        $permissions = $this->getUserPermissions($userId);
-        return in_array($permission, $permissions);
+        return in_array($permission, $this->getUserPermissions($userId));
     }
 
-    // ── Permission Cache Clear করো (Role change হলে) ─────────
+    // ── Cache clear ───────────────────────────────────────────
     public function clearUserCache(int $userId): void
     {
-        Cache::forget("user_permissions_{$userId}");
-        Cache::forget("user_role_{$userId}");
+        Cache::forget("rbac_data_{$userId}");
     }
+
+    private function emptyRbacData(): array
+    {
+        return ['permissions' => [], 'objects' => [], 'role' => null];
+    }
+
+
+    public function getGroupedPermissions(int $userId): array
+    {
+        $permissions = $this->getUserPermissions($userId);
+
+        $grouped = [];
+
+        foreach ($permissions as $permission) {
+
+        // employee.view
+        // employee.edit
+        // own_salary.export
+
+        $parts = explode('.', $permission);
+
+        if (count($parts) !== 2) {
+            continue;
+        }
+
+        [$object, $operation] = $parts;
+
+        $grouped[$object][] = $operation;
+    }
+
+    return $grouped;
+}
 }
